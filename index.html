@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deiboard - 个人音乐周榜 Ultimate V3</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #2980b9; --bg: #f5f7fa; --text: #333; --border: #e0e0e0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        
+        /* --- 导航 --- */
+        .nav { display: flex; gap: 10px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .nav button { padding: 10px 20px; border: none; background: transparent; cursor: pointer; font-size: 15px; font-weight: bold; color: #7f8c8d; border-radius: 6px; transition: 0.2s; }
+        .nav button.active { background: var(--accent); color: white; box-shadow: 0 2px 4px rgba(41, 128, 185, 0.3); }
+        .nav button:hover:not(.active) { background: #ecf0f1; }
+
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 控件栏 --- */
+        .controls { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        input[type="date"], input[type="text"], input[type="number"] { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; outline: none; transition: border 0.2s; }
+        input:focus { border-color: var(--accent); }
+        
+        button.btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; font-size: 13px; }
+        .btn-blue { background: var(--accent); } .btn-blue:hover { background: #1f618d; }
+        .btn-green { background: #27ae60; } .btn-green:hover { background: #219150; }
+        .btn-red { background: #c0392b; } .btn-red:hover { background: #a93226; }
+        .btn-gray { background: #95a5a6; } .btn-gray:hover { background: #7f8c8d; }
+        .btn-orange { background: #e67e22; } .btn-orange:hover { background: #d35400; }
+
+        /* --- 榜单制作编辑器 --- */
+        .editor-container { display: flex; gap: 20px; align-items: flex-start; }
+        .chart-list { flex: 3; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid #eee; }
+        
+        .editor-row { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
+        .editor-row:hover { background: #f8fbff; }
+        .editor-row.dragging { opacity: 0.5; background: #e8f6ff; }
+        
+        .col-drag { width: 30px; color: #ccc; cursor: move; text-align: center; font-size: 18px; user-select: none; }
+        .col-rank { width: 45px; }
+        .col-rank input { width: 100%; text-align: center; font-weight: bold; border: 1px solid transparent; background: transparent; font-size: 16px; color: var(--primary); }
+        .col-rank input:focus { border-color: var(--accent); background: white; }
+        
+        .col-inputs { flex: 1; display: flex; gap: 10px; margin: 0 10px; }
+        .col-inputs input { flex: 1; min-width: 0; }
+        
+        .col-stats { width: 140px; display: flex; flex-direction: column; justify-content: center; font-size: 11px; color: #666; background: #fafafa; padding: 4px 8px; border-radius: 4px; border: 1px solid #eee; height: 34px; box-sizing: border-box; }
+        .stat-line-1 { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 2px; }
+        .stat-line-2 { display: flex; justify-content: space-between; color: #999; }
+        
+        .col-action { width: 30px; text-align: center; }
+        .btn-icon { background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 16px; padding: 0; opacity: 0.6; }
+        .btn-icon:hover { opacity: 1; }
+
+        /* --- 历史榜单表格 --- */
+        .history-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 14px; }
+        .history-table th, .history-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
+        .history-table th { background: #f8f9fa; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #eaeaea; }
+        .history-table tr:hover { background: #fafafa; }
+        
+        /* 智能链接样式 */
+        .smart-link { color: #2c3e50; text-decoration: none; cursor: pointer; transition: 0.2s; border-bottom: 1px solid transparent; }
+        .smart-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+        .split-text { color: #95a5a6; margin: 0 2px; }
+
+        /* --- 搜索与走势 --- */
+        .search-wrapper { position: relative; width: 100%; max-width: 500px; }
+        .suggestions-box { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; z-index: 100; max-height: 300px; overflow-y: auto; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-radius: 0 0 4px 4px; }
+        .suggestion-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #f5f5f5; display: flex; justify-content: space-between; font-size: 13px; }
+        .suggestion-item:hover { background: #f0f8ff; }
+
+        .result-card { background: white; padding: 25px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); position: relative; border: 1px solid #eee; }
+        .trend-string-box { background: #f8f9fa; padding: 15px; border-radius: 6px; font-family: 'Consolas', monospace; line-height: 1.6; word-break: break-all; border: 1px solid #eee; margin: 15px 0; font-size: 13px; color: #444; }
+        
+        .song-stats-bar { display: flex; gap: 20px; margin-top: 10px; font-size: 14px; color: #555; background: #fdfdfd; padding: 10px; border-radius: 4px; border: 1px solid #f0f0f0; }
+        .stat-badge { font-weight: bold; color: var(--primary); }
+
+        .trend-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        .trend-table th, .trend-table td { border: 1px solid #eee; padding: 6px; text-align: center; }
+        .trend-table th { background: #f9f9f9; }
+
+        /* 状态颜色 */
+        .status-new { color: #8e44ad; font-weight: bold; }
+        .status-re { color: #d35400; font-weight: bold; }
+        .status-up { color: #27ae60; font-weight: bold; }
+        .status-down { color: #c0392b; font-weight: bold; }
+        .status-same { color: #7f8c8d; }
+
+        /* 侧边监控栏 */
+        .monitor-panel { flex: 1; background: #fff; padding: 15px; border-radius: 8px; height: fit-content; position: sticky; top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-width: 250px; }
+        .monitor-block { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .monitor-title { font-weight: bold; margin-bottom: 10px; color: #2c3e50; font-size: 14px; }
+        .insert-tools input { width: 100%; margin-bottom: 8px; box-sizing: border-box; }
+        .global-edit-btn { position: absolute; top: 20px; right: 20px; font-size: 12px; padding: 5px 10px; }
+
+        /* 歌手页面的歌曲按钮网格 */
+        .artist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 15px; }
+        .artist-song-btn { text-align: left; height: auto; padding: 10px; display: flex; flex-direction: column; gap: 3px; border: 1px solid #eee; background: #fcfcfc; color: #333; }
+        .artist-song-btn:hover { background: #fff; border-color: var(--accent); color: var(--accent); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .sub-info { font-size: 11px; color: #888; font-weight: normal; }
+    </style>
+</head>
+<body>
+
+<div class="nav">
+    <button onclick="switchTab('editor')" class="active" id="btn-editor">📝 榜单制作</button>
+    <button onclick="switchTab('history')" id="btn-history">📅 历史榜单查看</button>
+    <button onclick="switchTab('search')" id="btn-search">🔍 走势与修正</button>
+    <button onclick="switchTab('settings')" id="btn-settings">⚙️ 设置</button>
+</div>
+
+<div id="editor" class="section active">
+    <div class="controls">
+        <label>榜单日期：</label>
+        <input type="date" id="editor-date">
+        <button class="btn btn-blue" onclick="loadEditorData()">🔄 开始/重置本周</button>
+        <button class="btn btn-green" onclick="saveChart()">✅ 生成并保存榜单</button>
+        <span style="margin-left:auto; color:#7f8c8d; font-size:0.9em;">当前: <b id="count-display">0</b> 首</span>
+    </div>
+
+    <div class="editor-container">
+        <div class="chart-list" id="editor-list"></div>
+
+        <div class="monitor-panel">
+            <div class="monitor-block">
+                <div class="monitor-title">➕ 插入新歌 (键盘控制)</div>
+                <div class="insert-tools">
+                    <input type="number" id="insert-rank" placeholder="插入位置 (回车跳下项)" onkeydown="handleInsertKey(event, 'rank')">
+                    <input type="text" id="insert-title" placeholder="歌名 (回车跳下项)" onkeydown="handleInsertKey(event, 'title')">
+                    <input type="text" id="insert-artist" placeholder="歌手 (回车确认插入)" onkeydown="handleInsertKey(event, 'artist')">
+                    <button class="btn btn-blue" style="width:100%" onclick="insertSong()">插入并重新排序</button>
+                </div>
+            </div>
+            <div style="font-size: 12px; color: #888; line-height: 1.5;">
+                <strong>💡 键盘操作：</strong><br>
+                - 输入框中按 ⬇️ 或 Enter 跳至下一行<br>
+                - 输入框中按 ⬆️ 跳至上一行<br>
+                - 插入栏回车自动提交<br>
+                - 修改排名数字后回车直接调整位置
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="history" class="section">
+    <div class="controls">
+        <label>选择榜单：</label>
+        <select id="history-select" onchange="renderHistoryView()" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd;"></select>
+        <button class="btn btn-red" onclick="deleteCurrentChart()">🗑️ 删除此榜单</button>
+        <button class="btn btn-blue" onclick="editCurrentHistory()">✏️ 在编辑器中修改</button>
+    </div>
+    <div id="history-view"></div>
+</div>
+
+<div id="search" class="section">
+    <div class="controls" style="justify-content: center;">
+        <div class="search-wrapper">
+            <input type="text" id="search-input" placeholder="输入歌名或歌手查找..." autocomplete="off">
+            <div id="search-suggestions" class="suggestions-box"></div>
+        </div>
+        <button class="btn btn-blue" onclick="performSearch()">查询</button>
+    </div>
+    <div id="search-results"></div>
+</div>
+
+<div id="settings" class="section">
+    <div class="controls">
+        <label>默认榜单容量：</label>
+        <input type="number" id="setting-size" value="50" style="width: 80px;">
+        <button class="btn btn-blue" onclick="saveSettings()">保存配置</button>
+    </div>
+    <div class="controls" style="border-top:1px dashed #ddd; padding-top:20px; width:100%;">
+        <h3>💾 数据备份与恢复</h3>
+        <p style="font-size:13px; color:#666; width:100%;">建议定期导出备份。如需迁移数据，请先导出 JSON 文件。</p>
+        <button class="btn btn-gray" onclick="exportData()">⬇️ 导出备份 (.json)</button>
+        <button class="btn btn-gray" onclick="importDataTrigger()">⬆️ 导入备份</button>
+        <input type="file" id="import-file" style="display:none" onchange="importData(this)">
+        <button class="btn btn-red" style="margin-left:auto" onclick="clearAllData()">⚠️ 清空所有</button>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 0. 数据核心与初始化
+    // ==========================================
+    let db = JSON.parse(localStorage.getItem('deiboard_pro_v3_db')) || { charts: {}, settings: { size: 50 } };
+    let editingList = []; 
+    let dragSrcEl = null;
+    let lastWeekMap = {}; 
+    let historyStatsMap = {}; 
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('editor-date').value = getNextFriday();
+        document.getElementById('setting-size').value = db.settings.size;
+        updateHistorySelect();
+    });
+
+    function saveDB() { localStorage.setItem('deiboard_pro_v3_db', JSON.stringify(db)); }
+    
+    function switchTab(t) {
+        document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.nav button').forEach(e => e.classList.remove('active'));
+        document.getElementById(t).classList.add('active');
+        document.getElementById('btn-'+t).classList.add('active');
+        if(t==='history') updateHistorySelect();
+    }
+    
+    function getNextFriday() {
+        const d = new Date();
+        const day = d.getDay();
+        const diff = (day <= 5) ? (5 - day) : (12 - day); 
+        // 如果今天是周五，默认显示今天，除非你想默认下周五，此处逻辑为：周日-周四显示本周五，周五显示今天，周六显示下周五
+        const target = new Date(d.setDate(d.getDate() + ((5 + 7 - d.getDay()) % 7))); 
+        return target.toISOString().split('T')[0];
+    }
+
+    // ==========================================
+    // 1. 实用工具 (多歌手链接拆分)
+    // ==========================================
+    
+    // 核心函数：将 "Lady Gaga & Bruno Mars" 转换为带有独立超链接的 HTML
+    // 分隔符包括: & , feat. ft. x / (忽略大小写)
+    function generateArtistLinks(artistStr) {
+        if (!artistStr) return '';
+        // 正则捕获分隔符，以便保留它们作为普通文本
+        // 分隔符: & | , | feat. | ft. | x | / 
+        // 使用 capturing group () 让 split 保留分隔符
+        const parts = artistStr.split(/(\s*&\s*|\s*,\s*|\s+feat\.\s+|\s+ft\.\s+|\s+x\s+|\s*\/\s*)/i);
+        
+        return parts.map(part => {
+            // 检查这部分是否是分隔符
+            if (/^(\s*&\s*|\s*,\s*|\s+feat\.\s+|\s+ft\.\s+|\s+x\s+|\s*\/\s*)$/i.test(part)) {
+                return `<span class="split-text">${part}</span>`;
+            }
+            // 如果不是分隔符，就是歌手名，生成链接
+            const cleanName = part.trim();
+            if(!cleanName) return '';
+            return `<span class="smart-link" onclick="goToArtistPage('${escapeStr(cleanName)}')">${cleanName}</span>`;
+        }).join('');
+    }
+
+    function goToArtistPage(name) {
+        switchTab('search');
+        document.getElementById('search-input').value = name;
+        performSearch(name, null, true); // true 表示强制歌手模式
+    }
+
+    // ==========================================
+    // 2. 榜单编辑器 (逻辑核心)
+    // ==========================================
+
+    function loadEditorData() {
+        const date = document.getElementById('editor-date').value;
+        if (!date) return alert("请选择日期");
+
+        prepareComparisonData(date); // 准备历史数据用于计算 Stats
+
+        editingList = [];
+        if (db.charts[date]) {
+            // A. 编辑已有榜单
+            editingList = JSON.parse(JSON.stringify(db.charts[date])); 
+        } else {
+            // B. 新的一周：继承上周
+            const lastDate = getLastDate(date);
+            if (lastDate) {
+                // 深度拷贝上周
+                editingList = JSON.parse(JSON.stringify(db.charts[lastDate]));
+                // 注意：这里不需要手动重置 status/peak，因为 renderEditor 会调用 calculateRealTimeStats
+                // calculateRealTimeStats 会发现现在的 Rank 和 Last Week Rank 一样，所以自动显示 ↔️
+                // 并且 weeks 会自动 +1
+            }
+        }
+
+        const size = parseInt(db.settings.size);
+        while (editingList.length < size) editingList.push({ title: "", artist: "" });
+
+        renderEditor();
+    }
+
+    // 预处理历史数据以供实时计算
+    function prepareComparisonData(currentDate) {
+        lastWeekMap = {};
+        historyStatsMap = {};
+        
+        const lastDate = getLastDate(currentDate);
+        if (lastDate && db.charts[lastDate]) {
+            db.charts[lastDate].forEach(s => {
+                lastWeekMap[s.title + "|" + s.artist] = s;
+            });
+        }
+
+        // 统计所有历史 (用于计算 Re-entry 和 总 Peak)
+        for (let d in db.charts) {
+            if (d >= currentDate) continue; 
+            db.charts[d].forEach(s => {
+                const key = s.title + "|" + s.artist;
+                if (!historyStatsMap[key]) {
+                    historyStatsMap[key] = { peak: 100, weeks: 0, exists: true };
+                }
+                historyStatsMap[key].weeks += 1;
+                if (s.rank < historyStatsMap[key].peak) historyStatsMap[key].peak = s.rank;
+            });
+        }
+    }
+
+    function calculateRealTimeStats(title, artist, currentRank) {
+        if (!title) return { html: "", raw: {} };
+
+        const key = title + "|" + artist;
+        const lastWeek = lastWeekMap[key];
+        const history = historyStatsMap[key];
+
+        let statusText = "New";
+        let statusClass = "status-new";
+        let weeks = 1;
+        let peak = currentRank;
+
+        if (lastWeek) {
+            // 1. 连续在榜
+            const diff = lastWeek.rank - currentRank;
+            if (diff > 0) { statusText = `⬆️ ${diff}`; statusClass = "status-up"; }
+            else if (diff < 0) { statusText = `⬇️ ${Math.abs(diff)}`; statusClass = "status-down"; }
+            else { statusText = "↔️"; statusClass = "status-same"; }
+            
+            if (history) {
+                weeks = history.weeks + 1;
+                peak = Math.min(currentRank, history.peak);
+            }
+        } else {
+            // 2. 上周不在榜
+            if (history && history.exists) {
+                statusText = "Re-entry";
+                statusClass = "status-re";
+                weeks = history.weeks + 1;
+                peak = Math.min(currentRank, history.peak);
+            } else {
+                statusText = "New";
+                statusClass = "status-new";
+                weeks = 1;
+                peak = currentRank;
+            }
+        }
+
+        const html = `
+            <div class="stat-line-1 ${statusClass}">
+                <span>${statusText}</span>
+                <span>#${currentRank}</span>
+            </div>
+            <div class="stat-line-2">
+                <span>Wks: ${weeks}</span>
+                <span>Pk: ${peak}</span>
+            </div>
+        `;
+        return { html, raw: { weeks, peak, status: statusText } };
+    }
+
+    function renderEditor() {
+        const container = document.getElementById('editor-list');
+        container.innerHTML = "";
+        
+        // 过滤空行计数
+        document.getElementById('count-display').innerText = editingList.filter(x=>x.title).length;
+
+        editingList.forEach((song, index) => {
+            const rank = index + 1;
+            const stats = calculateRealTimeStats(song.title, song.artist, rank);
+            
+            if(song.title) song._computed = stats.raw; 
+
+            const row = document.createElement('div');
+            row.className = 'editor-row';
+            row.draggable = true;
+            row.dataset.index = index;
+
+            row.innerHTML = `
+                <div class="col-drag">☰</div>
+                <div class="col-rank">
+                    <input type="number" value="${rank}" onchange="manualRankChange(${index}, this.value)">
+                </div>
+                <div class="col-inputs">
+                    <input type="text" id="title-${index}" placeholder="歌名" value="${song.title || ''}" 
+                        oninput="updateRow(${index}, 'title', this.value)"
+                        onkeydown="handleKeyNav(event, ${index}, 'title')">
+                    <input type="text" id="artist-${index}" placeholder="歌手" value="${song.artist || ''}" 
+                        oninput="updateRow(${index}, 'artist', this.value)"
+                        onkeydown="handleKeyNav(event, ${index}, 'artist')">
+                </div>
+                <div class="col-stats" id="stats-${index}">${stats.html}</div>
+                <div class="col-action">
+                    <button class="btn-icon" onclick="deleteSong(${index})">✖</button>
+                </div>
+            `;
+            
+            // 拖拽事件
+            row.addEventListener('dragstart', function(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = 'move'; this.classList.add('dragging'); });
+            row.addEventListener('dragover', function(e) { e.preventDefault(); return false; });
+            row.addEventListener('dragenter', function(e) { e.preventDefault(); });
+            row.addEventListener('drop', handleDrop);
+            row.addEventListener('dragend', function() { this.classList.remove('dragging'); });
+
+            container.appendChild(row);
+        });
+    }
+
+    function updateRow(index, field, value) {
+        editingList[index][field] = value;
+        const rank = index + 1;
+        const stats = calculateRealTimeStats(editingList[index].title, editingList[index].artist, rank);
+        document.getElementById(`stats-${index}`).innerHTML = stats.html;
+        editingList[index]._computed = stats.raw;
+        document.getElementById('count-display').innerText = editingList.filter(x=>x.title).length;
+    }
+
+    function manualRankChange(currIdx, newRankVal) {
+        let newRank = parseInt(newRankVal);
+        if (isNaN(newRank) || newRank < 1) return renderEditor();
+        if (newRank > editingList.length) newRank = editingList.length;
+        const targetIdx = newRank - 1;
+        if (targetIdx === currIdx) return;
+
+        const item = editingList.splice(currIdx, 1)[0];
+        editingList.splice(targetIdx, 0, item);
+        renderEditor();
+    }
+
+    function handleDrop(e) {
+        e.stopPropagation();
+        if (dragSrcEl !== this) {
+            const srcIdx = parseInt(dragSrcEl.dataset.index);
+            const targetIdx = parseInt(this.dataset.index);
+            const item = editingList.splice(srcIdx, 1)[0];
+            editingList.splice(targetIdx, 0, item);
+            renderEditor();
+        }
+        return false;
+    }
+
+    // 键盘逻辑
+    function handleKeyNav(e, index, field) {
+        const max = editingList.length - 1;
+        if(e.key === 'Enter') {
+            e.preventDefault();
+            if(field === 'title') document.getElementById(`artist-${index}`).focus();
+            else if(index < max) document.getElementById(`title-${index+1}`).focus();
+        }
+        if(e.key === 'ArrowDown' && index < max) document.getElementById(`${field}-${index+1}`).focus();
+        if(e.key === 'ArrowUp' && index > 0) document.getElementById(`${field}-${index-1}`).focus();
+        // 右键跳到歌手
+        if(e.key === 'ArrowRight' && field === 'title') {
+            e.preventDefault();
+            document.getElementById(`artist-${index}`).focus();
+        }
+        // 左键跳回歌名
+        if(e.key === 'ArrowLeft' && field === 'artist') {
+            e.preventDefault();
+            document.getElementById(`title-${index}`).focus();
+        }
+    }
+
+    function handleInsertKey(e, field) {
+        if(e.key === 'Enter') {
+            e.preventDefault();
+            if(field === 'rank') document.getElementById('insert-title').focus();
+            if(field === 'title') document.getElementById('insert-artist').focus();
+            if(field === 'artist') insertSong();
+        }
+        if(e.key === 'ArrowDown') {
+            if(field === 'rank') document.getElementById('insert-title').focus();
+            if(field === 'title') document.getElementById('insert-artist').focus();
+        }
+    }
+
+    function insertSong() {
+        const rankIn = document.getElementById('insert-rank');
+        const titleIn = document.getElementById('insert-title');
+        const artistIn = document.getElementById('insert-artist');
+        
+        const rankVal = parseInt(rankIn.value);
+        if (!rankVal || !titleIn.value) return;
+
+        const idx = Math.min(Math.max(0, rankVal - 1), editingList.length);
+        
+        editingList.splice(idx, 0, { title: titleIn.value, artist: artistIn.value });
+        
+        // 清空
+        rankIn.value = ""; titleIn.value = ""; artistIn.value = "";
+        rankIn.focus();
+        renderEditor();
+    }
+
+    function deleteSong(index) {
+        editingList.splice(index, 1);
+        renderEditor();
+    }
+
+    function saveChart() {
+        const date = document.getElementById('editor-date').value;
+        const cleanList = editingList.filter(s => s.title && s.artist);
+        if (cleanList.length === 0) return alert("榜单为空");
+
+        const finalChart = cleanList.map((s, i) => {
+            if(!s._computed) s._computed = calculateRealTimeStats(s.title, s.artist, i+1).raw;
+            return {
+                rank: i + 1,
+                title: s.title,
+                artist: s.artist,
+                weeks: s._computed.weeks,
+                peak: s._computed.peak,
+                status: s._computed.status
+            };
+        });
+
+        db.charts[date] = finalChart;
+        saveDB();
+        alert("✅ 榜单已保存！");
+        updateHistorySelect();
+    }
+
+    // ==========================================
+    // 3. 历史榜单查看 (多歌手链接)
+    // ==========================================
+
+    function updateHistorySelect() {
+        const sel = document.getElementById('history-select');
+        sel.innerHTML = Object.keys(db.charts).sort().reverse().map(d => `<option value="${d}">${d}</option>`).join('');
+        if(sel.value) renderHistoryView();
+    }
+
+    function renderHistoryView() {
+        const d = document.getElementById('history-select').value;
+        const c = db.charts[d];
+        const view = document.getElementById('history-view');
+        if(!c) return view.innerHTML="";
+        
+        let html = `<table class="history-table"><thead><tr><th>#</th><th>Title</th><th>Artist</th><th>Wks</th><th>Pk</th><th>Trend</th></tr></thead><tbody>`;
+        
+        c.forEach(s => {
+            let col = "status-same";
+            if(s.status?.includes("New")) col="status-new";
+            if(s.status?.includes("Re")) col="status-re";
+            if(s.status?.includes("⬆️")) col="status-up";
+            if(s.status?.includes("⬇️")) col="status-down";
+            
+            // 歌名链接：跳转到走势
+            const titleHtml = `<span class="smart-link" onclick="goToSongTrend('${escapeStr(s.title)}', '${escapeStr(s.artist)}')">${s.title}</span>`;
+            
+            // 歌手链接：使用拆分函数
+            const artistHtml = generateArtistLinks(s.artist);
+
+            html += `<tr>
+                <td>${s.rank}</td>
+                <td>${titleHtml}</td>
+                <td>${artistHtml}</td>
+                <td>${s.weeks}</td>
+                <td>${s.peak}</td>
+                <td class="${col}">${s.status||'-'}</td>
+            </tr>`;
+        });
+        view.innerHTML = html + "</tbody></table>";
+    }
+
+    function goToSongTrend(title, artist) {
+        switchTab('search');
+        document.getElementById('search-input').value = title;
+        performSearch(title, artist);
+    }
+
+    function editCurrentHistory() {
+        const d = document.getElementById('history-select').value;
+        document.getElementById('editor-date').value = d;
+        switchTab('editor');
+        loadEditorData();
+    }
+
+    function deleteCurrentChart() {
+        const d = document.getElementById('history-select').value;
+        if(confirm(`确定要删除 ${d} 的榜单吗？`)) {
+            delete db.charts[d];
+            saveDB();
+            updateHistorySelect();
+            if(document.getElementById('history-select').value) renderHistoryView();
+            else document.getElementById('history-view').innerHTML = "";
+        }
+    }
+
+    // ==========================================
+    // 4. 搜索与走势 (Excel纯净版 + 歌手主页增强)
+    // ==========================================
+
+    const searchInput = document.getElementById('search-input');
+    const suggestionBox = document.getElementById('search-suggestions');
+
+    searchInput.addEventListener('input', function() {
+        const val = this.value.toLowerCase().trim();
+        if (!val) { suggestionBox.style.display = 'none'; return; }
+        const matches = new Set(); const rawData = [];
+        
+        Object.values(db.charts).forEach(c => c.forEach(s => {
+            // 匹配歌名
+            if (s.title.toLowerCase().includes(val)) {
+                const k = "s:" + s.title + "|" + s.artist;
+                if(!matches.has(k)) { matches.add(k); rawData.push({type:'song', txt: s.title, art: s.artist}); }
+            }
+            // 匹配歌手 (包含拆分后的子歌手)
+            if (s.artist.toLowerCase().includes(val)) {
+                // 如果直接匹配
+                if(!matches.has("a:"+s.artist)) {
+                    matches.add("a:"+s.artist); rawData.push({type:'artist', txt: s.artist});
+                }
+                // 拆分匹配
+                const parts = s.artist.split(/[,&]|\sfeat\./);
+                parts.forEach(p => {
+                    const cleanP = p.trim();
+                    if(cleanP.toLowerCase().includes(val) && !matches.has("a:"+cleanP)) {
+                        matches.add("a:"+cleanP); rawData.push({type:'artist', txt: cleanP});
+                    }
+                });
+            }
+        }));
+
+        suggestionBox.innerHTML = '';
+        if (rawData.length) {
+            suggestionBox.style.display = 'block';
+            rawData.slice(0,12).forEach(i => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.innerHTML = `<span>${i.type==='song'?'🎵':'🎤'} ${i.txt} ${i.art ? '- '+i.art : ''}</span>`;
+                div.onclick = () => {
+                    searchInput.value = i.txt; suggestionBox.style.display = 'none';
+                    if(i.type==='song') performSearch(i.txt, i.art); 
+                    else performSearch(i.txt, null, true);
+                };
+                suggestionBox.appendChild(div);
+            });
+        } else suggestionBox.style.display='none';
+    });
+
+    function performSearch(qOverride, exactArt, isArtMode) {
+        let q = qOverride || searchInput.value.trim();
+        if(!q) return;
+        const resDiv = document.getElementById('search-results');
+        resDiv.innerHTML = "";
+        suggestionBox.style.display = 'none';
+        
+        if (isArtMode) { renderArtistPage(q); return; }
+
+        const found = [];
+        const seen = new Set();
+        
+        Object.values(db.charts).forEach(c => c.forEach(s => {
+            const key = s.title + "|" + s.artist;
+            if (seen.has(key)) return;
+
+            let match = false;
+            if (exactArt) {
+                if (s.title === q && s.artist === exactArt) match = true;
+            } else {
+                if (s.title.toLowerCase() === q.toLowerCase()) match = true;
+            }
+            
+            if (match) {
+                seen.add(key);
+                found.push(s);
+            }
+        }));
+
+        if (found.length === 0) renderArtistPage(q); // 如果没找到歌，尝试找歌手
+        else found.forEach(s => renderSongTrend(s.title, s.artist));
+    }
+
+    function renderSongTrend(title, artist) {
+        const dates = Object.keys(db.charts).sort();
+        const history = [];
+        let minRank = 100;
+        let totalWeeks = 0;
+        
+        dates.forEach(d => {
+            const hit = db.charts[d].find(s => s.title === title && s.artist === artist);
+            if(hit) {
+                history.push({d, r: hit.rank});
+                if(hit.rank < minRank) minRank = hit.rank;
+                totalWeeks++;
+            }
+        });
+
+        if(history.length === 0) return;
+
+        // 生成走势字符串
+        let trendStr = "";
+        let isOut = true;
+        let tableRows = "";
+        const cleanTableData = [];
+        const startIdx = dates.indexOf(history[0].d);
+
+        for(let i=startIdx; i<dates.length; i++) {
+            const d = dates[i];
+            const hit = history.find(h=>h.d===d);
+            const shortD = d.substring(2).replace(/-/g,'/');
+            
+            if(hit) {
+                const rTxt = hit.r === minRank ? `*${hit.r}*` : hit.r;
+                if(isOut) { trendStr += `${rTxt}(${shortD})-`; isOut=false; }
+                else trendStr += `${rTxt}-`;
+                
+                tableRows += `<tr><td>${d}</td><td>${hit.r}</td></tr>`;
+                cleanTableData.push({d, r: hit.r});
+            } else {
+                if(!isOut) { trendStr += "out-"; isOut=true; }
+            }
+        }
+        if(trendStr.endsWith("-")) trendStr = trendStr.slice(0,-1);
+
+        const cleanDataStr = encodeURIComponent(JSON.stringify(cleanTableData));
+        const artistLinks = generateArtistLinks(artist); // 歌手名也是链接
+
+        const div = document.createElement('div');
+        div.className = 'result-card';
+        div.innerHTML = `
+            <button class="btn btn-orange global-edit-btn" onclick="triggerGlobalRename('song', '${escapeStr(title)}', '${escapeStr(artist)}')">🛠️ 修正歌名</button>
+            <h3 style="margin:0 0 5px 0">🎵 ${title}</h3>
+            <p style="color:#666; margin:0">🎤 ${artistLinks}</p>
+            
+            <div class="song-stats-bar">
+                <span>🏆 最高排名: <span class="stat-badge">#${minRank}</span></span>
+                <span>📅 在榜周数: <span class="stat-badge">${totalWeeks} 周</span></span>
+            </div>
+
+            <div class="trend-string-box">${trendStr}</div>
+            
+            <button class="btn btn-gray" onclick="copyTableClean('${cleanDataStr}')">📋 复制表格到 Excel (纯净版)</button>
+            <table class="trend-table">
+                <thead><tr><th>日期</th><th>排名</th></tr></thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        `;
+        document.getElementById('search-results').prepend(div);
+    }
+
+    // ★★★ 核心：Excel 纯净复制 ★★★
+    function copyTableClean(dataStr) {
+        const data = JSON.parse(decodeURIComponent(dataStr));
+        
+        // 创建隐藏容器
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'fixed'; tempDiv.style.left = '-9999px';
+        
+        // 内联样式：宋体 (SimSun), 11pt, 无背景
+        const tdStyle = 'border:none; background:none; font-family: "SimSun", "Songti SC", serif; font-size: 11pt; mso-number-format:"\\@";'; // mso-number-format 防止日期变####
+        
+        let html = '<table border="0" cellspacing="0" cellpadding="0"><tbody>';
+        // 表头
+        html += `<tr><td style="${tdStyle}">日期</td><td style="${tdStyle}">排名</td></tr>`;
+        // 数据
+        data.forEach(row => {
+            html += `<tr><td style="${tdStyle}">${row.d}</td><td style="${tdStyle}">${row.r}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        
+        tempDiv.innerHTML = html;
+        document.body.appendChild(tempDiv);
+        
+        const range = document.createRange();
+        range.selectNodeContents(tempDiv);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        
+        try {
+            document.execCommand('copy');
+            alert("✅ 纯净表格已复制！(宋体 11号 无背景)");
+        } catch (err) { alert("复制失败"); }
+        document.body.removeChild(tempDiv);
+    }
+
+    // 歌手主页 (含统计数据)
+    function renderArtistPage(name) {
+        const songsMap = {}; // key: title, val: {peak, weeks}
+        
+        // 遍历整个数据库计算该歌手所有歌曲的 Peak 和 Weeks
+        Object.values(db.charts).forEach(c => c.forEach(s => {
+            // 包含匹配 (处理 feat 等情况)
+            if(s.artist.toLowerCase().includes(name.toLowerCase())) {
+                if(!songsMap[s.title]) songsMap[s.title] = { peak: 100, weeks: 0, fullArtist: s.artist };
+                
+                songsMap[s.title].weeks++;
+                if(s.rank < songsMap[s.title].peak) songsMap[s.title].peak = s.rank;
+            }
+        }));
+
+        const songs = Object.keys(songsMap).map(title => ({
+            title, 
+            ...songsMap[title]
+        })).sort((a,b) => a.peak - b.peak); // 按最高排名排序
+
+        if(songs.length === 0) return document.getElementById('search-results').innerHTML = "<p align='center'>未找到数据</p>";
+
+        let html = `
+            <div class="result-card">
+                <button class="btn btn-orange global-edit-btn" onclick="triggerGlobalRename('artist', '${escapeStr(name)}', null)">🛠️ 修正歌手名</button>
+                <h2>🎤 ${name} - 歌曲统计</h2>
+                <div class="artist-grid">
+        `;
+        
+        songs.forEach(s => {
+            html += `
+                <button class="btn artist-song-btn" onclick="performSearch('${escapeStr(s.title)}', '${escapeStr(s.fullArtist)}')">
+                    <span>🎵 ${s.title}</span>
+                    <span class="sub-info">Peak: #${s.peak} | Wks: ${s.weeks}</span>
+                </button>
+            `;
+        });
+        html += "</div></div>";
+        document.getElementById('search-results').innerHTML = html;
+    }
+
+    // ==========================================
+    // 5. 全局修正
+    // ==========================================
+    function triggerGlobalRename(type, oldName, oldArtist) {
+        const promptText = type === 'song' 
+            ? `修改歌曲: "${oldName}"\n(歌手: ${oldArtist})\n注意：将同步修改所有历史榜单！`
+            : `修改歌手: "${oldName}"\n注意：将修改所有包含此名字的歌手字段！`;
+        
+        const newName = prompt(promptText, oldName);
+        if (!newName || newName === oldName) return;
+
+        let count = 0;
+        Object.keys(db.charts).forEach(d => {
+            db.charts[d].forEach(s => {
+                if (type === 'song') {
+                    if (s.title === oldName && s.artist === oldArtist) { s.title = newName; count++; }
+                } else {
+                    if (s.artist.includes(oldName)) {
+                        // 简单字符串替换，保留原格式(feat.)
+                        const regex = new RegExp(oldName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
+                        s.artist = s.artist.replace(regex, newName);
+                        count++;
+                    }
+                }
+            });
+        });
+
+        saveDB();
+        alert(`✅ 已更新 ${count} 条记录`);
+        if (type === 'song') performSearch(newName, oldArtist);
+        else performSearch(newName, null, true);
+    }
+
+    // ==========================================
+    // 6. 导入导出
+    // ==========================================
+    function exportData() {
+        const b = new Blob([JSON.stringify(db)], {type:"application/json"});
+        const a = document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`deiboard_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    }
+    function importDataTrigger() { document.getElementById('import-file').click(); }
+    function importData(el) {
+        const f = el.files[0];
+        if(!f) return;
+        const r = new FileReader();
+        r.onload = e => {
+            try { db = JSON.parse(e.target.result); saveDB(); location.reload(); }
+            catch(x) { alert("文件格式错误"); }
+        };
+        r.readAsText(f);
+    }
+    function clearAllData() { 
+        if(confirm("⚠️ 确定清空所有数据? 此操作不可恢复！")) { 
+            localStorage.removeItem('deiboard_pro_v3_db'); 
+            location.reload(); 
+        } 
+    }
+    function saveSettings() { db.settings.size = document.getElementById('setting-size').value; saveDB(); alert("设置已保存"); }
+    function escapeStr(s) { return s ? s.replace(/'/g, "\\'") : ""; }
+    function getLastDate(d) { return Object.keys(db.charts).sort().reverse().find(k => k < d); }
+
+</script>
+</body>
+</html>
