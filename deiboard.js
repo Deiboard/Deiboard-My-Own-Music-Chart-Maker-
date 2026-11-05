@@ -958,7 +958,7 @@ var ch = 0; var keys = Object.keys(db.albums);
 for (var i = 0; i < keys.length; i++) { var o = db.albums[keys[i]]; if (!o || o === 'Single') continue; var nn = norm(o); if (nn !== o) { db.albums[keys[i]] = nn; ch++; } }
 saveDB(); alert('✅ 已合并 ' + ch + ' 条专辑名称'); renderAlbumManage(); }
 
-function exportData() { var b = new Blob([JSON.stringify(db)], {type: 'application/json'}); var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'deiboard_backup_' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); }
+function exportData() { var dataCopy = JSON.parse(JSON.stringify(db)); if (dataCopy.settings && dataCopy.settings.github) delete dataCopy.settings.github.token; var b = new Blob([JSON.stringify(dataCopy)], {type: 'application/json'}); var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'deiboard_backup_' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); }
 function importDataTrigger() { document.getElementById('import-file').click(); }
 function importData(el) { var f = el.files[0]; if (!f) return; var r = new FileReader(); r.onload = function(e) { try { var im = JSON.parse(e.target.result); db = {charts: im.charts || {}, settings: im.settings || {size: 50}, albums: im.albums || {}}; saveDB(); location.reload(); } catch (x) { alert('文件格式错误'); } }; r.readAsText(f); }
 function clearAllData() { if (confirm('⚠️ 确定清空所有数据?')) { localStorage.removeItem('deiboard_pro_v4_db'); location.reload(); } }
@@ -991,7 +991,9 @@ function uploadToGitHub(callback) {
 var cfg = getGithubConfig();
 if (!cfg.token) { if (callback) callback(false, '未配置 GitHub Token（在「设置」中填写）'); return; }
 var base = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo);
-var content = JSON.stringify(db, null, 2);
+var dataCopy = JSON.parse(JSON.stringify(db));
+if (dataCopy.settings && dataCopy.settings.github) delete dataCopy.settings.github.token;
+var content = JSON.stringify(dataCopy, null, 2);
 var encoded = btoa(unescape(encodeURIComponent(content)));
 var authHeaders = {'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json'};
 fetch(base + '/contents/' + encodeURIComponent(cfg.path), {headers: authHeaders})
