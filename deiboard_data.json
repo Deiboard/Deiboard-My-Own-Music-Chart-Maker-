@@ -90361,91 +90361,91 @@
       },
       {
         "rank": 37,
-        "title": "petal",
-        "artist": "Ariana Grande",
-        "weeks": 17,
-        "peak": 2,
-        "status": "⬇️ 2"
-      },
-      {
-        "rank": 38,
-        "title": "Hey Hi",
-        "artist": "KiiiKiii",
-        "weeks": 6,
-        "peak": 33,
-        "status": "⬇️ 1"
-      },
-      {
-        "rank": 39,
-        "title": "Babylon",
-        "artist": "Taylor Swift",
-        "weeks": 9,
-        "peak": 4,
-        "status": "⬇️ 3"
-      },
-      {
-        "rank": 40,
-        "title": "Great Expectation",
-        "artist": "SIENNA SPIRO",
-        "weeks": 1,
-        "peak": 40,
-        "status": "New"
-      },
-      {
-        "rank": 41,
-        "title": "blue",
-        "artist": "girl in red",
-        "weeks": 5,
-        "peak": 31,
-        "status": "⬆️ 1"
-      },
-      {
-        "rank": 42,
-        "title": "Raindance",
-        "artist": "Dave & Tems",
-        "weeks": 13,
-        "peak": 33,
-        "status": "⬇️ 4"
-      },
-      {
-        "rank": 43,
         "title": "Girl Like Me",
         "artist": "PinkPantheress",
         "weeks": 29,
         "peak": 18,
-        "status": "⬇️ 4"
+        "status": "⬆️ 2"
       },
       {
-        "rank": 44,
-        "title": "Pretty Girl",
-        "artist": "RESCENE",
-        "weeks": 18,
+        "rank": 38,
+        "title": "petal",
+        "artist": "Ariana Grande",
+        "weeks": 17,
+        "peak": 2,
+        "status": "⬇️ 3"
+      },
+      {
+        "rank": 39,
+        "title": "Hey Hi",
+        "artist": "KiiiKiii",
+        "weeks": 6,
+        "peak": 33,
+        "status": "⬇️ 2"
+      },
+      {
+        "rank": 40,
+        "title": "Babylon",
+        "artist": "Taylor Swift",
+        "weeks": 9,
         "peak": 4,
         "status": "⬇️ 4"
       },
       {
-        "rank": 45,
-        "title": "lao shi",
-        "artist": "Helena Gao",
-        "weeks": 19,
-        "peak": 10,
-        "status": "⬇️ 4"
+        "rank": 41,
+        "title": "Great Expectation",
+        "artist": "SIENNA SPIRO",
+        "weeks": 1,
+        "peak": 41,
+        "status": "New"
       },
       {
-        "rank": 46,
-        "title": "What You Need",
-        "artist": "Tems",
-        "weeks": 13,
-        "peak": 40,
-        "status": "⬇️ 1"
+        "rank": 42,
+        "title": "blue",
+        "artist": "girl in red",
+        "weeks": 5,
+        "peak": 31,
+        "status": "↔️"
       },
       {
-        "rank": 47,
+        "rank": 43,
         "title": "oh yeah?",
         "artist": "Steve Lacy",
         "weeks": 10,
         "peak": 35,
-        "status": "⬇️ 4"
+        "status": "↔️"
+      },
+      {
+        "rank": 44,
+        "title": "Raindance",
+        "artist": "Dave & Tems",
+        "weeks": 13,
+        "peak": 33,
+        "status": "⬇️ 6"
+      },
+      {
+        "rank": 45,
+        "title": "Pretty Girl",
+        "artist": "RESCENE",
+        "weeks": 18,
+        "peak": 4,
+        "status": "⬇️ 5"
+      },
+      {
+        "rank": 46,
+        "title": "lao shi",
+        "artist": "Helena Gao",
+        "weeks": 19,
+        "peak": 10,
+        "status": "⬇️ 5"
+      },
+      {
+        "rank": 47,
+        "title": "What You Need",
+        "artist": "Tems",
+        "weeks": 13,
+        "peak": 40,
+        "status": "⬇️ 2"
       },
       {
         "rank": 48,
